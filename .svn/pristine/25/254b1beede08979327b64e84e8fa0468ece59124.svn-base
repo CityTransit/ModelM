@@ -1,0 +1,71 @@
+/*************************************
+ *
+ *
+ *
+ *
+ *
+ *************************************/
+
+#include <stdio.h>
+#include <windows.h>
+#include <irrKlang.h>
+#include <sstream>
+
+#pragma comment(lib, "irrKlang.lib")
+
+using namespace irrklang;
+
+LRESULT CALLBACK LowLevelKeyboardProc( int nCode, WPARAM wParam, LPARAM lParam );
+
+ISoundEngine* sndEngine;
+
+int main()
+{
+	//Initialize sound engine
+	sndEngine = createIrrKlangDevice();
+	if (!sndEngine)
+		return 0; // error starting up the engine
+
+	// Retrieve the applications instance
+	HINSTANCE appInstance = GetModuleHandle(NULL);
+		// Set a global Windows Hook to capture keystrokes.
+		SetWindowsHookEx( WH_KEYBOARD_LL, LowLevelKeyboardProc, appInstance, 0 );
+	MSG msg;
+	while(GetMessage(&msg, NULL, 0, 0) > 0)
+	{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+	}
+	sndEngine->drop(); // delete engine
+return 0;
+}
+
+LRESULT CALLBACK LowLevelKeyboardProc( int nCode, WPARAM wParam, LPARAM lParam )
+{
+	// Declare our pointer to the KBDLLHOOKSTRUCT
+	KBDLLHOOKSTRUCT *pKeyBoard = (KBDLLHOOKSTRUCT *)lParam;
+
+	switch( wParam )
+	{
+	case WM_KEYUP: // When the key has been pressed and released
+		{
+			//Keylogger
+			BYTE keyboard_state[256];
+			WORD wCharacter = 0;
+			GetKeyboardState(keyboard_state);
+			int i = ToAscii((UINT)pKeyBoard->vkCode, pKeyBoard->scanCode,
+                     keyboard_state, &wCharacter, 0);
+			if(i != -1)
+				printf("%c", wCharacter);
+			else
+				printf("[?]");
+
+			//Model M Simulator
+			std::stringstream ss; ss << "..\\sound\\" << 1 + rand() % 10 << ".mp3";
+			sndEngine->play2D(ss.str().c_str());
+		}
+	default:
+		return CallNextHookEx( NULL, nCode, wParam, lParam );
+	}
+	return 0;
+}
